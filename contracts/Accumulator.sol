@@ -24,11 +24,6 @@ interface IMasterChef {
 contract Accumulator is Ownable {
     using SafeERC20 for IERC20;
 
-    struct Share {
-        uint pairBalance;
-        uint profit;
-    }
-
     struct UserInfo {
         uint amount;
         uint rewardDebt;
@@ -69,7 +64,7 @@ contract Accumulator is Ownable {
     }
 
     /**
-     * @dev Deposit `amount` lp tokens to the balance.
+     * @dev Deposit `amount` lp tokens to the contract.
      */
     function deposit(uint amount) external {
         require(lpToken.balanceOf(msg.sender) >= amount, "Not enough funds");
@@ -92,7 +87,7 @@ contract Accumulator is Ownable {
     }
 
     /**
-     * @dev Withdraws user's lp tokens and reward.
+     * @dev Withdraws user's lp tokens and rewards.
      */
     function withdraw(uint amount) external {
         UserInfo storage user = userInfo[msg.sender];
@@ -118,7 +113,8 @@ contract Accumulator is Ownable {
     }
 
     /**
-     * @dev Updates reward distribution variables.
+     * @dev Updates the reward distribution variables.
+     * This may be called by an external agent to harvest the rewards.
      */
     function updateRewardDistribution() public {
         uint lpBalance = lpToken.balanceOf(address(this)) 
@@ -141,13 +137,17 @@ contract Accumulator is Ownable {
         return userInfo[user].amount;
     }
 
+    function totalBalance() public view returns (uint) {
+        return lpToken.balanceOf(address(this)) + masterchef.userInfo(poolId, address(this));
+    }
+
     function pendingRewards(address _user) public view returns (uint) {
         UserInfo storage user = userInfo[_user];
         return (user.amount * accRewardPerShare / 1e12) - user.rewardDebt;
     }
 
     /**
-     * @dev Collects rewards and swap them for the target token. 
+     * @dev Collects rewards and swaps them for the target token. 
      */
     function _harvest() internal {
         masterchef.deposit(poolId, 0);
