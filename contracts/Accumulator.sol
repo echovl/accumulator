@@ -42,6 +42,9 @@ contract Accumulator is Ownable {
 
     mapping(address => UserInfo) userInfo;
 
+    event Deposit(address account, uint amount);
+    event Withdraw(address account, uint amount);
+
     constructor(
         address _masterchef,
         address _router,
@@ -84,6 +87,8 @@ contract Accumulator is Ownable {
         lpToken.safeTransferFrom(msg.sender, address(this), amount);
         uint _balance = lpToken.balanceOf(address(this));
         masterchef.deposit(poolId, _balance);
+
+        emit Deposit(msg.sender, amount);
     }
 
     /**
@@ -92,7 +97,7 @@ contract Accumulator is Ownable {
     function withdraw(uint amount) external {
         UserInfo storage user = userInfo[msg.sender];
 
-        require(user.amount >= amount);
+        require(user.amount >= amount, "Not enough funds");
 
         updateRewardDistribution();
 
@@ -110,6 +115,8 @@ contract Accumulator is Ownable {
         }
 
         lpToken.safeTransfer(msg.sender, amount);
+
+        emit Withdraw(msg.sender, amount);
     }
 
     /**
@@ -133,14 +140,23 @@ contract Accumulator is Ownable {
         lastRewardTime = block.timestamp;
     }
 
+    /**
+     * @dev Returns the user's deposited LP balance.
+     */
     function balance(address user) public view returns (uint) {
         return userInfo[user].amount;
     }
 
+    /**
+     * @dev Returns the total LP balance deposited.
+     */
     function totalBalance() public view returns (uint) {
         return lpToken.balanceOf(address(this)) + masterchef.userInfo(poolId, address(this));
     }
 
+    /**
+     * @dev Returns the user's pending rewards calculated by the last distribution.
+     */
     function pendingRewards(address _user) public view returns (uint) {
         UserInfo storage user = userInfo[_user];
         return (user.amount * accRewardPerShare / 1e12) - user.rewardDebt;

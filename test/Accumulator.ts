@@ -111,4 +111,25 @@ describe("Accumulator", function () {
             })
         })
     })
+
+    describe("withdraw", function () {
+        it("fails if not enough funds", async function () {
+            await expect(accumulator.withdraw(100)).to.be.revertedWith(
+                "Not enough funds"
+            )
+        })
+
+        it("withdraws LP tokens and rewards", async function () {
+            lp.mint(owner.address, 1000)
+            await lp.approve(accumulator.address, ethers.constants.MaxUint256)
+
+            await accumulator.deposit(100)
+            await accumulator.withdraw(100)
+
+            expect(await ice.balanceOf(owner.address)).to.eq(
+                FIXED_BOO_REWARDS * BOO_ICE_RATIO
+            )
+            expect(await lp.balanceOf(owner.address)).to.eq(1000)
+        })
+    })
 })
